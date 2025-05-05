@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: 
+                
+                url('C:\Users\saima\OneDrive\Desktop\promain\multi\03a14cdb-3cd1-45be-9d15-ba1dcdaffa67.webp') center/cover no-repeat fixed,
+                
+                #0a192f;
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        #output-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background:teal;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 18px;
+            z-index: 100;
+        }
+        
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        #video-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        #videoFeed {
+            border: 3px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none;
+            max-width: 100%;
+        }
+        
+        .click-active {
+            background-color: #ddd !important;
+        }
+        
+        .active-mode {
+            background-color: #2196F3 !important;
+        }
+        
+        #morseCode {
+            font-family: monospace;
+            font-size: 1.2em;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        #decodedText {
+            font-size: 1.2em;
+            color: #2196F3;
+            font-weight: bold;
+        }
+        
+        .input-section {
+            margin: 20px auto;
+            max-width: 600px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        
+        #morse-info {
+            margin: 20px auto;
+            padding: 15px;
+            font-size: 1.1em;
+            max-width: 800px;
+            background-color: darkgray;
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        h1, h2 {
+            color: white;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-upload {
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+            margin: 10px;
+        }
+        
+        .file-upload:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="output-box">
+            <p><strong>Morse Code:</strong> <span id="morseCode"></span></p>
+            <p><strong>Decoded Output:</strong> <span id="decodedText"></span></p>
+        </div>
+
+        <h1>Morse Code Detection</h1>
+        
+        <h2>Select Input Mode</h2>
+        <label for="audio-file" class="file-upload">Choose Audio File</label>
+        <input type="file" id="audio-file" accept="audio/*">
+        <button onclick="uploadMorse('audio')">Upload Audio & Decode</button>
+        <button id="eyeModeBtn" onclick="setMode('eye')">Eye Blink Mode</button>
+        <button id="handModeBtn" onclick="setMode('hand')">Hand Gesture Mode</button>
+        <button id="decodeArea">Mouse Input</button>
+        <button onclick="stopCamera()">Stop Camera</button>
+        
+        <div id="video-container">
+            <img id="videoFeed" src="" width="540" height="380">
+        </div>
+        
+        <div class="input-section">
+            <h2>Morse Code Input</h2>
+            <button onclick="addSpace()">Add Space</button>
+            <button onclick="addWordSpace()">Add Word Space</button>
+            <button onclick="clearMorseCode()">Clear Morse Code</button>
+            <button onclick="decodeMorse()">Decode Morse</button>
+        </div>
+        
+        <div id="morse-info">
+            <p><strong>How it Works:</strong></p>
+            <ul>
+                <li>Sound Input: Use short and long beeps for dots and dashes.</li>
+                <li>Hand Gestures: Fist for dot and palm for dash.</li>
+                <li>Eye Blinks: Blink short for dots, long for dashes.</li>
+                <li>Mouse Input: Click for dots, hold for dashes.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let clickStartTime = 0;
+        let currentMode = null;
+        let updateInterval;
+        
+        const decodeArea = document.getElementById("decodeArea");
+        const videoFeed = document.getElementById("videoFeed");
+        const morseCodeDisplay = document.getElementById("morseCode");
+        const decodedTextDisplay = document.getElementById("decodedText");
+        const eyeModeBtn = document.getElementById("eyeModeBtn");
+        const handModeBtn = document.getElementById("handModeBtn");
+        
+        function resetModeButtons() {
+            eyeModeBtn.classList.remove("active-mode");
+            handModeBtn.classList.remove("active-mode");
+        }
+
+        function setMode(mode) {
+            resetModeButtons();
+            currentMode = mode;
+            
+          
+            videoFeed.style.display = "block";
+            videoFeed.src = "/video_feed?mode=" + mode;
+            
+            
+            if (mode === 'eye') {
+                eyeModeBtn.classList.add("active-mode");
+            } else if (mode === 'hand') {
+                handModeBtn.classList.add("active-mode");
+            }
+            
+            updateMorseDisplay();
+        }
+
+        function stopCamera() {
+            fetch('/stop_video', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    videoFeed.src = "";
+                    videoFeed.style.display = "none";
+                    resetModeButtons();
+                    currentMode = null;
+                });
+        }
+       
+        function clearMorseCode() {
+            fetch('/clear_morse', { method: 'POST' })
+                .then(() => {
+                    morseCodeDisplay.innerText = "";
+                    decodedTextDisplay.innerText = "";
+                });
+        }
+       
+        function decodeMorse() {
+            fetch('/decode_morse', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    morseCodeDisplay.innerText = data.morse_code;
+                    decodedTextDisplay.innerText = data.decoded;
+                });
+        }
+
+        function updateMorseDisplay() {
+            fetch('/get_morse')
+                .then(response => response.json())
+                .then(data => {
+                    morseCodeDisplay.innerText = data.morse_code;
+                });
+        }
+
+        function addSpace() {
+            fetch('/add_space', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    morseCodeDisplay.innerText = data.morse_code;
+                });
+        }
+
+        function addWordSpace() {
+            fetch('/add_word_space', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    morseCodeDisplay.innerText = data.morse_code;
+                });
+        }
+
+        
+        decodeArea.addEventListener("mousedown", () => {
+            clickStartTime = new Date().getTime();
+            decodeArea.classList.add("click-active");
+        });
+
+        decodeArea.addEventListener("mouseup", () => {
+            decodeArea.classList.remove("click-active");
+            let clickDuration = new Date().getTime() - clickStartTime;
+            let char = clickDuration < 300 ? "." : "-";
+            
+            fetch('/add_morse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ char: char })
+            })
+            .then(response => response.json())
+            .then(data => {
+                morseCodeDisplay.innerText = data.morse_code;
+            });
+        });
+
+        
+        decodeArea.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            clickStartTime = new Date().getTime();
+            decodeArea.classList.add("click-active");
+        });
+
+        decodeArea.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            decodeArea.classList.remove("click-active");
+            let clickDuration = new Date().getTime() - clickStartTime;
+            let char = clickDuration < 300 ? "." : "-";
+            
+            fetch('/add_morse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ char: char })
+            })
+            .then(response => response.json())
+            .then(data => {
+                morseCodeDisplay.innerText = data.morse_code;
+            });
+        });
+
+        window.onload = function() {
+            updateInterval = setInterval(updateMorseDisplay, 1000);
+        };
+
+        function uploadMorse(inputType) {
+            clearInterval(updateInterval);
+            
+            let formData = new FormData();
+            if (inputType === "audio") {
+                let fileInput = document.getElementById("audio-file").files[0];
+                if (!fileInput) {
+                    alert("Please upload an audio file.");
+                    updateInterval = setInterval(updateMorseDisplay, 1000);
+                    return;
+                }
+                formData.append("audio", fileInput);
+            }
+            
+            fetch("/predict", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                morseCodeDisplay.innerText = data.morse_code;
+                decodedTextDisplay.innerText = data.decoded_text;
+                
+                setTimeout(() => {
+                    updateInterval = setInterval(updateMorseDisplay, 1000);
+                }, 2000);
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                updateInterval = setInterval(updateMorseDisplay, 1000);
+            });
+        }
+    </script>
+</body>
+</html>
